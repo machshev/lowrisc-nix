@@ -26,6 +26,16 @@
       (pkgs.callPackage ../pkgs/ncurses6-fhs.nix {})
     ];
   };
+
+  # Some vendor tool scripts have a `#!/bin/csh` shebang. nixpkgs' tcsh does
+  # not itself provide a `csh` name, so add one.
+  tcsh-fhs = pkgs.symlinkJoin {
+    name = "tcsh-fhs";
+    paths = [pkgs.tcsh];
+    postBuild = ''
+      ln -s ${pkgs.tcsh}/bin/tcsh $out/bin/csh
+    '';
+  };
 in
   with pkgs;
     [
@@ -36,6 +46,7 @@ in
       bash
       coreutils
       ksh
+      tcsh-fhs
       perl
       bc
       time
