@@ -16,6 +16,7 @@
   bazel_ot = pkgs.callPackage ./bazel_ot {};
   verible_ot = pkgs.callPackage ./verible_ot.nix {};
   verible_0_0_4080 = pkgs.callPackage ./verible_0_0_4080.nix {};
+  libclang_21 = pkgs.callPackage ./libclang.nix {llvmPackages = pkgs.llvmPackages_21;};
 
   # CherIoT packages
   spike-ibex-cosim = pkgs.callPackage ./spike.nix {};
