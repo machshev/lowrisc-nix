@@ -36,6 +36,29 @@
       ln -s ${pkgs.tcsh}/bin/tcsh $out/bin/csh
     '';
   };
+
+  # Bazel filters out all environment including PKG_CONFIG_PATH. Append this inside wrapper.
+  pkg-config-patched = pkgs.pkg-config.override {
+    extraBuildCommands = ''
+      # nixpkgs installs utils.bash read-only (install -m444), so make it
+      # writable to append, then restore the original mode.
+      chmod +w $out/nix-support/utils.bash
+      echo "export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib/pkgconfig" >> $out/nix-support/utils.bash
+      chmod 444 $out/nix-support/utils.bash
+    '';
+  };
+
+  # Wrap automake's aclocal to set the default macro search path to the FHSenv pre-populated value
+  # The nixpkgs default is to use ACLOCAL_PATH to override this default, but this avoids passing another
+  # environment into the sandbox non-hermetically.
+  automake' = pkgs.automake.overrideAttrs (oldAttrs: {
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [pkgs.makeWrapper];
+    postFixup =
+      (oldAttrs.postFixup or "")
+      + ''
+        wrapProgram $out/bin/aclocal --add-flags "--system-acdir=/usr/share/aclocal"
+      '';
+  });
 in
   with pkgs;
     [
@@ -45,6 +68,9 @@ in
       # Shells / core userland the tools shell out to.
       bash
       coreutils
+      file
+      tree
+      zip
       ksh
       tcsh-fhs
       perl
@@ -65,12 +91,25 @@ in
       # via PATH only; a vendor toolchain's own bundled `ld`, invoked by absolute
       # path, is unaffected — that was the job of the removed `ldRelink` shim.)
       (lib.hiPrio binutils-unwrapped)
+      # Build drivers and helpers the flows routinely shell out to (make-based
+      # sim harnesses, fusesoc, version stamping, third-party autotools/cmake
+      # builds, ...). Without these in the base env they only happened to resolve
+      # via a configured vendor tool's own bundled PATH, which silently broke
+      # whenever no such tool was active.
+      automake'
+      gnumake
+      git
+      cmake
+      pkg-config-patched
+      autoconf
+      libtool
 
       # Compression / math / misc core libraries
       zlib
       lz4
       zstd
       brotli.lib
+      brotli # the `brotli` CLI (brotli.lib above is only the shared library)
       gmp
       pcre2
       readline
@@ -105,6 +144,8 @@ in
       # XML
       libxml2
       libxml2_13
+      libxslt.bin # provides xsltproc (binaries live in the `bin` output)
+      xmlstarlet
 
       # Fonts / 2D / GTK stack
       freetype
