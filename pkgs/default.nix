@@ -13,7 +13,10 @@
   # OpenTitan packages
   verilator_ot = import ./verilator_ot {inherit pkgs;};
   python_ot = pkgs.callPackage ./python_ot {inherit inputs;};
-  bazel_ot = pkgs.callPackage ./bazel_ot {};
+  # Pinned to OpenTitan's current .bazelversion. `bazel_ot` is a
+  # backwards-compatible alias tracking whichever pinned Bazel is current.
+  bazel_8_7_0 = pkgs.callPackage ./bazel_8_7_0.nix {};
+  bazel_ot = bazel_8_7_0;
   verible_ot = pkgs.callPackage ./verible_ot.nix {};
   verible_0_0_4080 = pkgs.callPackage ./verible_0_0_4080.nix {};
 
